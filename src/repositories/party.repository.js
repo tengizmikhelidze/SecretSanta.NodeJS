@@ -135,9 +135,13 @@ class PartyRepository {
   /**
    * Update party status
    */
-  async updateStatus(partyId, status) {
-    const sql = 'UPDATE parties SET status = ? WHERE id = ?';
-    await query(sql, [status, partyId]);
+  async updateStatus(partyId, status, connection) {
+    const sql = `
+      UPDATE parties 
+      SET status = ?
+      WHERE id = ?
+    `;
+    await query(sql, [status, partyId], connection);
   }
 
   /**
@@ -182,4 +186,3 @@ class PartyRepository {
 }
 
 module.exports = new PartyRepository();
-

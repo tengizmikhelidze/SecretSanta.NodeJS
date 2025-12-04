@@ -156,11 +156,69 @@ class ParticipantRepository {
   }
 
   /**
-   * Set assignment for participant
+   * Find participant by party and user ID
    */
-  async setAssignment(participantId, assignedToId) {
-    const sql = 'UPDATE participants SET assigned_to = ? WHERE id = ?';
-    await query(sql, [assignedToId, participantId]);
+  async findByPartyAndUserId(partyId, userId) {
+    const sql = `
+      SELECT * FROM participants 
+      WHERE party_id = ? AND user_id = ?
+    `;
+    const participants = await query(sql, [partyId, userId]);
+    return participants[0] || null;
+  }
+
+  /**
+   * Set assignment for a participant
+   */
+  async setAssignment(participantId, assignedToId, connection) {
+    const sql = `
+      UPDATE participants 
+      SET assigned_to = ?
+      WHERE id = ?
+    `;
+    await query(sql, [assignedToId, participantId], connection);
+  }
+
+  /**
+   * Clear all assignments for a party
+   */
+  async clearAssignments(partyId, connection) {
+    const sql = `
+      UPDATE participants 
+      SET assigned_to = NULL
+      WHERE party_id = ?
+    `;
+    await query(sql, [partyId], connection);
+  }
+
+  /**
+   * Update participant notification status
+   */
+  async update(participantId, updates) {
+    const fields = [];
+    const values = [];
+
+    if (updates.notificationSent !== undefined) {
+      fields.push('notification_sent = ?');
+      values.push(updates.notificationSent);
+    }
+
+    if (updates.notificationSentAt !== undefined) {
+      fields.push('notification_sent_at = ?');
+      values.push(updates.notificationSentAt);
+    }
+
+    if (fields.length === 0) return;
+
+    values.push(participantId);
+
+    const sql = `
+      UPDATE participants 
+      SET ${fields.join(', ')}
+      WHERE id = ?
+    `;
+
+    await query(sql, values);
   }
 
   /**
@@ -218,4 +276,3 @@ class ParticipantRepository {
 }
 
 module.exports = new ParticipantRepository();
-

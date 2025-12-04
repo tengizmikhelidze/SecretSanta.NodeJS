@@ -28,9 +28,10 @@ const testConnection = async () => {
 };
 
 // Execute query with error handling
-const query = async (sql, params) => {
+const query = async (sql, params, connection = null) => {
   try {
-    const [rows] = await pool.execute(sql, params);
+    const executor = connection || pool;
+    const [rows] = await executor.execute(sql, params);
     return rows;
   } catch (error) {
     logger.error('Database query error:', { sql, error: error.message });

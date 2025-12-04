@@ -13,6 +13,7 @@ const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 const partyRoutes = require('./routes/party.routes');
 const wishlistRoutes = require('./routes/wishlist.routes');
+const assignmentRoutes = require('./routes/assignment.routes');
 
 const app = express();
 
@@ -76,6 +77,7 @@ app.use(`/api/${apiVersion}/auth`, authLimiter, authRoutes);
 app.use(`/api/${apiVersion}/users`, userRoutes);
 app.use(`/api/${apiVersion}/parties`, partyRoutes);
 app.use(`/api/${apiVersion}/wishlists`, wishlistRoutes);
+app.use(`/api/${apiVersion}/parties`, assignmentRoutes);
 
 // Welcome route
 app.get('/', (req, res) => {
