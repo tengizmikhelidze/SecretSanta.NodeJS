@@ -12,71 +12,86 @@ class PartyService {
    * Create new party
    */
   async createParty(userId, partyData) {
-    const { hostEmail, participants, ...partyInfo } = partyData;
+    try {
+      const { hostEmail, participants, ...partyInfo } = partyData;
 
-    // Create party
-    const party = await partyRepository.create({
-      userId,
-      hostEmail,
-      ...partyInfo
-    });
+      // Create party
+      const party = await partyRepository.create({
+        userId,
+        hostEmail,
+        ...partyInfo
+      });
 
-    // Log audit
-    await auditService.log({
-      userId,
-      entityType: 'party',
-      entityId: party.id,
-      action: 'create',
-      changes: { status: 'created' }
-    });
+      // Log audit
+      await auditService.log({
+        userId,
+        entityType: 'party',
+        entityId: party.id,
+        action: 'create',
+        changes: { status: 'created' }
+      });
 
-    // Add host as participant
-    const hostParticipant = await participantRepository.create({
-      partyId: party.id,
-      userId,
-      name: partyData.hostName || 'Host',
-      email: hostEmail,
-      isHost: true
-    });
+      // Add host as participant
+      const hostParticipant = await participantRepository.create({
+        partyId: party.id,
+        userId,
+        name: partyData.hostName || 'Host',
+        email: hostEmail,
+        isHost: true
+      });
 
-    // Add additional participants if provided
-    if (participants && participants.length > 0) {
-      for (const participant of participants) {
-        // Check email uniqueness
-        const exists = await participantRepository.findByPartyAndEmail(party.id, participant.email);
-        if (exists) {
-          throw new ConflictError(`Email ${participant.email} is already added to this party`);
-        }
+      // Add additional participants if provided
+      if (participants && participants.length > 0) {
+        for (const participant of participants) {
+          // Skip if participant email is same as host email
+          if (participant.email.toLowerCase() === hostEmail.toLowerCase()) {
+            logger.info(`Skipping participant with host email: ${participant.email}`);
+            continue;
+          }
 
-        const newParticipant = await participantRepository.create({
-          partyId: party.id,
-          name: participant.name,
-          email: participant.email,
-          isHost: false
-        });
+          // Check email uniqueness
+          const exists = await participantRepository.findByPartyAndEmail(party.id, participant.email);
+          if (exists) {
+            throw new ConflictError(`Email ${participant.email} is already added to this party`);
+          }
 
-        // Send invitation email
-        try {
-          await emailService.sendPartyInvitationEmail(
-            participant.email,
-            participant.name,
-            hostParticipant.name,
-            {
-              partyId: party.id,
-              partyDate: party.party_date,
-              location: party.location,
-              maxAmount: party.max_amount,
-              personalMessage: party.personal_message
-            },
-            newParticipant.access_token
-          );
-        } catch (error) {
-          logger.error('Failed to send invitation:', error);
+          const newParticipant = await participantRepository.create({
+            partyId: party.id,
+            name: participant.name,
+            email: participant.email,
+            isHost: false
+          });
+
+          // Send invitation email
+          try {
+            await emailService.sendPartyInvitationEmail(
+              participant.email,
+              participant.name,
+              hostParticipant.name,
+              {
+                partyId: party.id,
+                partyDate: party.party_date,
+                location: party.location,
+                maxAmount: party.max_amount,
+                personalMessage: party.personal_message
+              },
+              newParticipant.access_token
+            );
+          } catch (error) {
+            logger.error('Failed to send invitation:', error);
+          }
         }
       }
-    }
 
-    return await this.getPartyDetails(party.id, userId);
+      return await this.getPartyDetails(party.id, userId);
+    } catch (error) {
+      logger.error('Error in createParty:', {
+        message: error.message,
+        stack: error.stack,
+        partyData
+      });
+      throw error;
+    }
   }
 
   /**
