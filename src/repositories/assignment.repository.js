@@ -76,14 +76,16 @@ class AssignmentRepository {
   async bulkCreate(assignments, connection) {
     if (assignments.length === 0) return [];
 
-    const values = assignments.map(a => [a.partyId, a.giverId, a.receiverId]);
+    // Build VALUES clause with placeholders: (?, ?, ?), (?, ?, ?), ...
+    const placeholders = assignments.map(() => '(?, ?, ?)').join(', ');
+    const flatValues = assignments.flatMap(a => [a.partyId, a.giverId, a.receiverId]);
 
     const sql = `
       INSERT INTO assignments (party_id, giver_id, receiver_id)
-      VALUES ?
+      VALUES ${placeholders}
     `;
 
-    const result = await query(sql, [values], connection);
+    const result = await query(sql, flatValues, connection);
 
     return assignments.map((a, index) => ({
       id: result.insertId + index,
@@ -117,15 +119,17 @@ class AssignmentRepository {
   async saveToPreviousAssignments(partyId, year, assignments, connection) {
     if (assignments.length === 0) return;
 
-    const values = assignments.map(a => [partyId, year, a.giverId, a.receiverId]);
+    // Build VALUES clause with placeholders: (?, ?, ?, ?), (?, ?, ?, ?), ...
+    const placeholders = assignments.map(() => '(?, ?, ?, ?)').join(', ');
+    const flatValues = assignments.flatMap(a => [partyId, year, a.giverId, a.receiverId]);
 
     const sql = `
       INSERT INTO previous_assignments (party_id, year, giver_id, receiver_id)
-      VALUES ?
+      VALUES ${placeholders}
       ON DUPLICATE KEY UPDATE receiver_id = VALUES(receiver_id)
     `;
 
-    await query(sql, [values], connection);
+    await query(sql, flatValues, connection);
   }
 
   /**
