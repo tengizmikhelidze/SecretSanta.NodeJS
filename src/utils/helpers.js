@@ -3,10 +3,10 @@ const jwt = require('jsonwebtoken');
 
 /**
  * Generate a random token
- * @param {number} length - Token length
+ * @param {number} length - Token length in bytes (will be doubled in hex)
  * @returns {string} - Random token
  */
-const generateToken = (length = 64) => {
+const generateToken = (length = 32) => {
   return crypto.randomBytes(length).toString('hex');
 };
 
