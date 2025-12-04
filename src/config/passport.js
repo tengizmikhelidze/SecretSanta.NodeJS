@@ -5,8 +5,12 @@ const userRepository = require('../repositories/user.repository');
 const logger = require('../utils/logger');
 
 // JWT Strategy
+// Extract JWT from Authorization header OR query parameter (?token=<jwt>)
 const jwtOptions = {
-  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+  jwtFromRequest: ExtractJwt.fromExtractors([
+    ExtractJwt.fromAuthHeaderAsBearerToken(),           // Standard: Authorization: Bearer <token>
+    ExtractJwt.fromUrlQueryParameter('token')          // Alternative: ?token=<token>
+  ]),
   secretOrKey: process.env.JWT_SECRET
 };
 
